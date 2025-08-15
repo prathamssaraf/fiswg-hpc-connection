@@ -113,15 +113,13 @@ class ModelManager:
             "torch_dtype": torch.bfloat16,
             "device_map": "auto",
             "trust_remote_code": True,
-            "cache_dir": CACHE_DIR
+            "cache_dir": CACHE_DIR,
+            "attn_implementation": "eager"  # Use eager attention to avoid flash_attn requirement
         }
         
-        if gpu_memory < 80:  # 72B model needs substantial memory
-            logger.warning("GPU memory may be insufficient for 72B model. Enabling optimizations...")
+        if gpu_memory < 16:  # Adjust threshold for smaller models
+            logger.warning("GPU memory may be insufficient. Enabling optimizations...")
             base_config["load_in_8bit"] = True
-            
-        if torch.cuda.is_available():
-            base_config["attn_implementation"] = "flash_attention_2"
             
         return base_config
 
@@ -133,12 +131,13 @@ class ModelManager:
             if Qwen2VLForConditionalGeneration is None:
                 raise ImportError("Qwen2VLForConditionalGeneration not available. Please install qwen-vl-utils or update transformers.")
             
+            # Use the same load config for consistency
+            gpu_memory = self.check_gpu_memory()
+            load_config = self._get_load_config(gpu_memory)
+            
             self.model = Qwen2VLForConditionalGeneration.from_pretrained(
                 self.model_name,
-                torch_dtype=torch.bfloat16,
-                device_map="auto",
-                trust_remote_code=True,
-                cache_dir=CACHE_DIR
+                **load_config
             )
             self.processor = AutoProcessor.from_pretrained(
                 self.model_name, 
