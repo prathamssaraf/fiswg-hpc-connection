@@ -54,14 +54,42 @@ SCRATCH_PACKAGES = '/scratch/ps5218/python_packages'
 if SCRATCH_PACKAGES not in sys.path:
     sys.path.insert(0, SCRATCH_PACKAGES)
 
-# Clear any problematic module cache before importing our modules
-problematic_modules = ['numpy', 'accelerate', 'autoawq']
+# CRITICAL: Clear ALL numpy-related modules to prevent NumPy 2.0 compatibility issues
+print("Clearing NumPy module cache to prevent version conflicts...")
+numpy_modules = []
+for module_name in list(sys.modules.keys()):
+    if 'numpy' in module_name.lower():
+        numpy_modules.append(module_name)
+
+for module in numpy_modules:
+    if module in sys.modules:
+        del sys.modules[module]
+        print(f"Cleared {module}")
+
+# Clear other problematic modules
+problematic_modules = ['accelerate', 'autoawq', 'transformers']
 for problem_module in problematic_modules:
     if problem_module in sys.modules:
         # Remove from cache to prevent conflicts
         for module_name in list(sys.modules.keys()):
             if module_name.startswith(problem_module):
                 del sys.modules[module_name]
+                print(f"Cleared {module_name}")
+
+# Verify NumPy version before importing anything else
+try:
+    import numpy
+    print(f"NumPy version: {numpy.__version__}")
+    if not numpy.__version__.startswith('1.26'):
+        print(f"❌ Wrong NumPy version! Expected 1.26.x, got {numpy.__version__}")
+        print("Run 'python3 fix_numpy.py' to fix this issue")
+        sys.exit(1)
+    else:
+        print("✓ NumPy version is compatible")
+except ImportError as e:
+    print(f"❌ Failed to import NumPy: {e}")
+    print("Run 'python3 fix_numpy.py' to install compatible NumPy")
+    sys.exit(1)
 
 from config import setup_environment, setup_logging
 from evaluator import QwenVLEvaluator
