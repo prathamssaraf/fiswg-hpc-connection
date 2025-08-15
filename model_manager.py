@@ -148,7 +148,7 @@ class ModelManager:
             "device_map": "auto",
             "trust_remote_code": True,
             "cache_dir": CACHE_DIR,
-            "attn_implementation": "eager"  # Use eager attention to avoid flash_attn requirement
+            "attn_implementation": "sdpa"  # Use SDPA attention to avoid Triton compilation
         }
         
         logger.info(f"Loading AWQ quantized model with {gpu_memory:.1f}GB GPU memory")
