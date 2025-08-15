@@ -13,7 +13,8 @@ This project implements a comprehensive facial identification evaluation system 
 ## Project Structure
 
 ```
-├── main.py                 # Entry point for the evaluation
+├── main_venv.py            # Entry point for the evaluation (virtual environment)
+├── setup_venv.py           # Virtual environment setup script
 ├── config.py              # Environment setup and constants
 ├── model_manager.py       # Qwen2.5-VL model loading and management
 ├── forensic_prompts.py    # FISWG 19-component analysis prompt
@@ -68,26 +69,22 @@ The system is configured for HPC environments with:
 - Custom package installation paths
 - AWQ quantization for memory efficiency
 
-### Installation for Qwen2.5-VL-72B-Instruct-AWQ
+### Installation Steps
 ```bash
-# Install transformers from source (REQUIRED)
-pip install --target /scratch/ps5218/python_packages git+https://github.com/huggingface/transformers accelerate
+# Step 1: Create virtual environment
+python3 setup_venv.py
 
-# Install AutoAWQ for quantization support (REQUIRED)
-pip install --target /scratch/ps5218/python_packages 'autoawq>=0.1.8'
-
-# Install other dependencies
-pip install --target /scratch/ps5218/python_packages 'qwen-vl-utils[decord]==0.0.8'
+# Step 2: Run the evaluation
+/scratch/ps5218/qwen_venv/bin/python main_venv.py
 ```
 
-### Required Packages
+### Required Packages (automatically installed)
 - torch
 - transformers (from source)
-- autoawq>=0.1.8
 - qwen-vl-utils[decord]==0.0.8
 - scikit-learn
 - PIL (Pillow)
-- numpy
+- numpy>=1.21.0,<2.0.0
 - tqdm
 - requests
 - accelerate
@@ -96,12 +93,19 @@ pip install --target /scratch/ps5218/python_packages 'qwen-vl-utils[decord]==0.0
 
 ### Basic Evaluation
 ```bash
-python main.py
+# First time setup
+python3 setup_venv.py
+
+# Run evaluation with interactive model selection
+/scratch/ps5218/qwen_venv/bin/python main_venv.py
 ```
 
-### Custom Configuration
+### Interactive Model Selection
+The system now supports interactive model selection:
+- Option 1: Qwen2.5-VL-7B-Instruct (16GB+ GPU memory)
+- Option 2: Qwen2.5-VL-72B-Instruct (80GB+ GPU memory)
+
 Modify `config.py` to adjust:
-- Model selection (72B vs 7B)
 - Cache directories
 - Evaluation parameters
 - Batch sizes
@@ -134,11 +138,12 @@ Each image pair receives a comprehensive forensic analysis report including:
 ### Model Variants
 - **Qwen2.5-VL-72B**: Highest accuracy, requires 80GB+ VRAM
 - **Qwen2.5-VL-7B**: Faster processing, requires 16GB+ VRAM
-- Automatic fallback from 72B to 7B if memory insufficient
+- Interactive selection at runtime
 
 ### Optimization Features
-- 8-bit quantization for memory efficiency
-- Flash Attention 2 support
+- Non-quantized models for best quality
+- SDPA attention implementation
+- Virtual environment isolation
 - Batch processing with progress tracking
 - Intermediate result saving
 
@@ -165,23 +170,20 @@ Public repository for research and educational purposes.
 
 ## Troubleshooting
 
-### NumPy 2.0 Compatibility Issues
-If you encounter errors like "numpy.core.multiarray failed to import" or "module compiled with NumPy 1.x cannot run with NumPy 2.0":
+### Virtual Environment Approach
+The system now uses a virtual environment to avoid package conflicts:
 
 ```bash
-# Fix NumPy compatibility issues
-python3 fix_numpy.py
-
-# Or for complete package rebuild
-python3 rebuild_all_packages.py
+# Recreate virtual environment if needed
+python3 setup_venv.py
 ```
 
 ### Common Issues
 
-#### AutoAWQ Installation Fails
+#### Package Installation Issues
 ```bash
-# Run the cleanup script
-python3 cleanup_packages.py
+# Recreate the virtual environment
+python3 setup_venv.py
 ```
 
 #### Disk Quota Exceeded
@@ -191,21 +193,20 @@ The system automatically uses scratch directories. Ensure you have:
 - `/scratch/ps5218/pip_cache` for pip cache
 
 #### Model Loading Errors
-1. Ensure transformers is installed from source
-2. Verify AutoAWQ version >= 0.1.8
-3. Check GPU memory (40GB+ recommended for 72B model)
+1. Ensure transformers is installed from source (handled by setup_venv.py)
+2. Check GPU memory (16GB+ for 7B, 80GB+ for 72B model)
+3. Verify virtual environment is active
 
 #### Package Reinstalls Every Run
-Run the updated package manager that checks scratch directory:
+The virtual environment approach eliminates this issue:
 ```bash
-python3 main.py  # Now checks packages correctly
+/scratch/ps5218/qwen_venv/bin/python main_venv.py
 ```
 
-### Available Helper Scripts
+### Available Scripts
 
-- `fix_numpy.py` - Fixes NumPy 2.0 compatibility issues
-- `rebuild_all_packages.py` - Complete package rebuild with correct NumPy
-- `cleanup_packages.py` - Clean installation of core packages
+- `setup_venv.py` - Creates virtual environment with all dependencies
+- `main_venv.py` - Main entry point with interactive model selection
 
 ## Contributing
 

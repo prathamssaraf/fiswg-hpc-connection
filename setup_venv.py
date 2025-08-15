@@ -192,8 +192,8 @@ if __name__ == "__main__":
         print("\n🎉 Virtual environment setup complete!")
         print("\nTo use the environment:")
         print("1. source activate_qwen_venv.sh")
-        print("2. python main.py")
+        print("2. python main_venv.py")
         print("\nOr directly:")
-        print("/scratch/ps5218/qwen_venv/bin/python main.py")
+        print("/scratch/ps5218/qwen_venv/bin/python main_venv.py")
     else:
         print("\n❌ Virtual environment setup failed")
