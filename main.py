@@ -33,6 +33,10 @@ os.environ['TORCH_KERNEL_CACHE_PATH'] = SCRATCH_TORCH_KERNELS
 # Tokenizers parallelism (suppress warnings)
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
+# Triton compilation settings (prevent JIT compilation issues)
+os.environ['TRITON_DISABLE_JIT'] = '1'
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
+
 from config import setup_environment, setup_logging
 from evaluator import QwenVLEvaluator
 from utils import save_results, create_timestamp_filename, print_evaluation_summary
@@ -51,6 +55,7 @@ def main():
     logger.info(f"HF_HOME: {os.environ.get('HF_HOME')}")
     logger.info(f"SCIKIT_LEARN_DATA: {os.environ.get('SCIKIT_LEARN_DATA')}")
     logger.info(f"TRITON_CACHE_DIR: {os.environ.get('TRITON_CACHE_DIR')}")
+    logger.info(f"TRITON_DISABLE_JIT: {os.environ.get('TRITON_DISABLE_JIT')}")
     logger.info(f"TOKENIZERS_PARALLELISM: {os.environ.get('TOKENIZERS_PARALLELISM')}")
     logger.info("Note: This requires transformers installed from source")
     
