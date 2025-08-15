@@ -3,6 +3,7 @@ Data Loader for LFW Dataset
 Handles loading and processing of the Labeled Faces in the Wild dataset
 """
 
+import os
 import logging
 import numpy as np
 from typing import Tuple, List
@@ -23,8 +24,17 @@ class LFWDataLoader:
         logger.info("Loading LFW dataset...")
         
         try:
-            # Load LFW pairs
-            lfw_pairs = fetch_lfw_pairs(subset='test', funneled=True, resize=0.5)
+            # Use scratch directory for LFW dataset to avoid disk quota issues
+            data_home = os.environ.get('SCIKIT_LEARN_DATA', '/scratch/ps5218/scikit_learn_data')
+            logger.info(f"Using sklearn data directory: {data_home}")
+            
+            # Load LFW pairs with explicit data_home
+            lfw_pairs = fetch_lfw_pairs(
+                subset='test', 
+                funneled=True, 
+                resize=0.5,
+                data_home=data_home
+            )
             
             self.pairs = lfw_pairs.pairs
             self.targets = lfw_pairs.target  # 1 = same person, 0 = different person

@@ -10,11 +10,17 @@ import logging
 # CRITICAL: Set cache directories BEFORE any other imports
 # This ensures we use scratch directory instead of home directory (which has disk quota issues)
 SCRATCH_CACHE = '/scratch/ps5218/huggingface_cache'
+SCRATCH_DATA = '/scratch/ps5218/scikit_learn_data'
+
+# Hugging Face cache directories
 os.environ['HF_HOME'] = SCRATCH_CACHE
 os.environ['HF_HUB_CACHE'] = SCRATCH_CACHE
 os.environ['TRANSFORMERS_CACHE'] = SCRATCH_CACHE
 os.environ['HF_DATASETS_CACHE'] = SCRATCH_CACHE
 os.environ['TORCH_HOME'] = SCRATCH_CACHE
+
+# Scikit-learn data directory
+os.environ['SCIKIT_LEARN_DATA'] = SCRATCH_DATA
 
 from config import setup_environment, setup_logging
 from evaluator import QwenVLEvaluator
@@ -27,8 +33,10 @@ def main():
     logger = setup_logging()
     
     logger.info("Starting LFW evaluation with Qwen2.5-VL-72B-Instruct-AWQ (quantized)")
-    logger.info(f"Using cache directory: {SCRATCH_CACHE}")
+    logger.info(f"Using HF cache directory: {SCRATCH_CACHE}")
+    logger.info(f"Using sklearn data directory: {SCRATCH_DATA}")
     logger.info(f"HF_HOME environment variable: {os.environ.get('HF_HOME')}")
+    logger.info(f"SCIKIT_LEARN_DATA environment variable: {os.environ.get('SCIKIT_LEARN_DATA')}")
     logger.info("Note: This requires transformers installed from source")
     
     try:
