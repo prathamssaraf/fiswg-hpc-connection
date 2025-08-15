@@ -171,14 +171,30 @@ class ModelManager:
         
         if packages_to_install:
             logger.info(f"Installing {len(packages_to_install)} missing packages...")
+            
+            # Install numpy first to scratch directory with no-deps to avoid conflicts
+            numpy_packages = [pkg for pkg in packages_to_install if pkg.startswith('numpy')]
+            if numpy_packages:
+                for numpy_pkg in numpy_packages:
+                    try:
+                        logger.info(f"Installing {numpy_pkg} to scratch directory (no-deps)")
+                        subprocess.run([
+                            sys.executable, "-m", "pip", "install", "--target", 
+                            PACKAGES_DIR, "--upgrade", "--force-reinstall", "--no-deps", numpy_pkg
+                        ], check=True)
+                        logger.info(f"✓ Installed {numpy_pkg}")
+                        packages_to_install.remove(numpy_pkg)
+                    except subprocess.CalledProcessError as e:
+                        logger.warning(f"Failed to install {numpy_pkg}: {e}")
+            
+            # Install remaining packages normally to scratch directory
             for package in packages_to_install:
                 try:
-                    # Install numpy and accelerate to user directory instead of target to avoid conflicts
-                    if package.startswith('numpy') or package.startswith('accelerate'):
-                        logger.info(f"Installing {package} to user directory to avoid conflicts")
+                    if package.startswith('accelerate') or package.startswith('autoawq'):
+                        # Use --upgrade --force-reinstall for problematic packages
                         subprocess.run([
-                            sys.executable, "-m", "pip", "install", "--user", 
-                            "--upgrade", package
+                            sys.executable, "-m", "pip", "install", "--target", 
+                            PACKAGES_DIR, "--upgrade", "--force-reinstall", package
                         ], check=True)
                     else:
                         subprocess.run([
@@ -190,7 +206,7 @@ class ModelManager:
                     logger.warning(f"Failed to install {package}: {e}")
             
             # Recheck accelerate after installation if it was installed
-            if any("accelerate" in pkg for pkg in packages_to_install):
+            if any("accelerate" in pkg.lower() for pkg in packages_to_install):
                 check_accelerate_availability()
         else:
             logger.info("All required packages already installed")

@@ -48,13 +48,28 @@ def cleanup_packages():
         "autoawq>=0.1.8"
     ]
     
-    print("📦 Installing core packages to user directory...")
-    for package in core_packages:
+    print("📦 Installing core packages to scratch directory...")
+    
+    # Install numpy first with no-deps to avoid conflicts
+    try:
+        print("Installing numpy (no-deps)...")
+        subprocess.run([
+            sys.executable, "-m", "pip", "install", "--target", 
+            scratch_packages, "--upgrade", "--force-reinstall", "--no-deps", 
+            "numpy>=1.21.0,<2.0.0"
+        ], check=True)
+        print("✓ Installed numpy")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to install numpy: {e}")
+    
+    # Install other packages
+    other_packages = ["accelerate", "autoawq>=0.1.8"]
+    for package in other_packages:
         try:
             print(f"Installing {package}...")
             subprocess.run([
-                sys.executable, "-m", "pip", "install", "--user", 
-                "--upgrade", "--force-reinstall", package
+                sys.executable, "-m", "pip", "install", "--target", 
+                scratch_packages, "--upgrade", "--force-reinstall", package
             ], check=True)
             print(f"✓ Installed {package}")
         except subprocess.CalledProcessError as e:

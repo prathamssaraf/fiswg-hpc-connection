@@ -43,8 +43,14 @@ os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
 # Force use of PyTorch's SDPA instead of Flash Attention or Triton
 os.environ['PYTORCH_DISABLE_FLASH_ATTENTION'] = '1'
 
-# Clear any problematic module cache before importing our modules
 import sys
+
+# Ensure Python uses packages from scratch directory first
+SCRATCH_PACKAGES = '/scratch/ps5218/python_packages'
+if SCRATCH_PACKAGES not in sys.path:
+    sys.path.insert(0, SCRATCH_PACKAGES)
+
+# Clear any problematic module cache before importing our modules
 problematic_modules = ['numpy', 'accelerate', 'autoawq']
 for problem_module in problematic_modules:
     if problem_module in sys.modules:
