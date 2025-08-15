@@ -55,6 +55,19 @@ class ImageAnalyzer:
             # Parse prediction from output
             prediction = self._parse_prediction(output_text)
             
+            # Debug logging for first few pairs
+            if hasattr(self, '_debug_count'):
+                self._debug_count += 1
+            else:
+                self._debug_count = 1
+                
+            if self._debug_count <= 3:  # Log first 3 outputs for debugging
+                logger.info(f"DEBUG - Model output sample {self._debug_count}:")
+                logger.info(f"Output length: {len(output_text)} characters")
+                logger.info(f"First 500 chars: {output_text[:500]}")
+                logger.info(f"Last 500 chars: {output_text[-500:]}")
+                logger.info(f"Prediction: {prediction}")
+            
             return output_text, prediction
             
         except Exception as e:
@@ -130,60 +143,110 @@ class ImageAnalyzer:
         """Parse model output to extract same/different person prediction from detailed forensic analysis"""
         output_lower = output_text.lower()
         
+        # Debug: Log key sections found
+        sections_found = []
+        if "conclusion:" in output_lower:
+            sections_found.append("conclusion")
+        if "expert determination:" in output_lower:
+            sections_found.append("expert_determination")
+        if "forensic conclusion" in output_lower:
+            sections_found.append("forensic_conclusion")
+        
+        logger.debug(f"Sections found: {sections_found}")
+        
         # Primary: Look for the final conclusion statement (most reliable)
         if "conclusion:" in output_lower:
             conclusion_part = output_lower.split("conclusion:")[-1]
-            if "same person" in conclusion_part or "same individual" in conclusion_part:
-                return True
-            elif "different people" in conclusion_part or "different person" in conclusion_part or "different individuals" in conclusion_part:
-                return False
+            logger.debug(f"Conclusion part: {conclusion_part[:200]}")
+            
+            # More comprehensive same person patterns
+            same_patterns = ["same person", "same individual", "identical person", "same identity"]
+            different_patterns = ["different people", "different person", "different individuals", 
+                                "different identity", "not the same person", "distinct individuals"]
+            
+            for pattern in same_patterns:
+                if pattern in conclusion_part:
+                    logger.debug(f"Found same pattern: {pattern}")
+                    return True
+            for pattern in different_patterns:
+                if pattern in conclusion_part:
+                    logger.debug(f"Found different pattern: {pattern}")
+                    return False
         
         # Secondary: Look for Expert Determination section
         if "expert determination:" in output_lower:
             determination_part = output_lower.split("expert determination:")[-1]
-            if "same individual" in determination_part or "same person" in determination_part:
+            logger.debug(f"Expert determination part: {determination_part[:200]}")
+            
+            if any(pattern in determination_part for pattern in ["same individual", "same person", "identical"]):
                 return True
-            elif "different individuals" in determination_part or "different people" in determination_part:
+            elif any(pattern in determination_part for pattern in ["different individuals", "different people", "not the same"]):
                 return False
         
         # Tertiary: Look for forensic conclusion section
         if "forensic conclusion" in output_lower:
             forensic_part = output_lower.split("forensic conclusion")[-1]
-            if "same person" in forensic_part or "same individual" in forensic_part:
+            logger.debug(f"Forensic conclusion part: {forensic_part[:200]}")
+            
+            if any(pattern in forensic_part for pattern in ["same person", "same individual", "identical"]):
                 return True
-            elif "different people" in forensic_part or "different individuals" in forensic_part:
+            elif any(pattern in forensic_part for pattern in ["different people", "different individuals"]):
                 return False
         
-        # Fallback: Enhanced keyword analysis with weighted scoring
+        # Enhanced fallback: Look for any conclusive statements
+        conclusive_same = [
+            "are the same person", "is the same person", "same identity",
+            "match confirmed", "positive identification", "identity confirmed"
+        ]
+        conclusive_different = [
+            "are different people", "not the same person", "different identities",
+            "no match", "negative identification", "identity excluded"
+        ]
+        
+        for pattern in conclusive_same:
+            if pattern in output_lower:
+                logger.debug(f"Found conclusive same pattern: {pattern}")
+                return True
+        for pattern in conclusive_different:
+            if pattern in output_lower:
+                logger.debug(f"Found conclusive different pattern: {pattern}")
+                return False
+        
+        # Weighted keyword analysis (improved)
         same_indicators = [
-            ("same person", 5), ("same individual", 5), ("identical", 3), 
-            ("match", 2), ("correlate", 2), ("consistent", 1), ("similar", 1)
+            ("same person", 10), ("same individual", 10), ("identical", 5), 
+            ("match", 3), ("correlate", 3), ("consistent", 2), ("similar", 1)
         ]
         different_indicators = [
-            ("different people", 5), ("different person", 5), ("different individuals", 5),
-            ("not the same", 4), ("distinct", 3), ("inconsistent", 2), ("contradict", 2)
+            ("different people", 10), ("different person", 10), ("different individuals", 10),
+            ("not the same", 8), ("distinct", 5), ("inconsistent", 3), ("contradict", 3)
         ]
         
         same_score = sum(weight for phrase, weight in same_indicators if phrase in output_lower)
         different_score = sum(weight for phrase, weight in different_indicators if phrase in output_lower)
         
-        if same_score > different_score:
+        logger.debug(f"Same score: {same_score}, Different score: {different_score}")
+        
+        if same_score > different_score and same_score > 0:
             return True
-        elif different_score > same_score:
+        elif different_score > same_score and different_score > 0:
             return False
         else:
-            # Enhanced fallback: look for positive/negative language patterns
-            positive_patterns = ["support identity", "confirm identity", "establish identity"]
-            negative_patterns = ["exclude identity", "rule out", "cannot confirm"]
+            # Final fallback: Look for general positive/negative language
+            positive_patterns = ["support identity", "confirm identity", "establish identity", "yes", "positive"]
+            negative_patterns = ["exclude identity", "rule out", "cannot confirm", "no", "negative"]
             
             has_positive = any(pattern in output_lower for pattern in positive_patterns)
             has_negative = any(pattern in output_lower for pattern in negative_patterns)
             
             if has_positive and not has_negative:
+                logger.debug("Using positive language fallback")
                 return True
             elif has_negative and not has_positive:
+                logger.debug("Using negative language fallback")
                 return False
             else:
-                # Final default to different if completely unclear
-                logger.warning(f"Unclear prediction in forensic output: {output_text[:300]}...")
+                # Ultimate fallback: analyze overall sentiment
+                logger.warning(f"Unable to parse prediction clearly from output: {output_text[:200]}...")
+                # Default to False (different) for unclear cases
                 return False
