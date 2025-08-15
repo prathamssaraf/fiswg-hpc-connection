@@ -84,7 +84,7 @@ class QwenVLEvaluator:
                     'ground_truth': ground_truth,
                     'prediction': prediction,
                     'correct': is_correct,
-                    'model_output': output_text[:2000]  # Keep detailed forensic analysis
+                    'model_output': output_text  # Simple YES/NO output
                 }
                 results.append(result)
                 
