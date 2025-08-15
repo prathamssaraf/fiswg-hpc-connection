@@ -317,9 +317,16 @@ class ModelManager:
             # Don't pass device parameter, we'll move model after loading
             logger.info(f"Loading non-quantized 72B model for single device with {gpu_memory:.1f}GB GPU memory")
         
-        # Non-quantized 72B model requires significant memory
-        if gpu_memory < 80:  # 72B model typically needs 140GB+ for full precision, 80GB+ for bfloat16
-            logger.warning("GPU memory may be insufficient for 72B model. 80GB+ recommended for bfloat16.")
+        # Check memory requirements based on model size
+        if "72B" in self.model_name:
+            if gpu_memory < 80:  # 72B model typically needs 140GB+ for full precision, 80GB+ for bfloat16
+                logger.warning("GPU memory may be insufficient for 72B model. 80GB+ recommended for bfloat16.")
+                logger.warning("Consider using the 7B model if you encounter out-of-memory errors.")
+        elif "7B" in self.model_name:
+            if gpu_memory < 16:  # 7B model needs ~14GB for bfloat16
+                logger.warning("GPU memory may be insufficient for 7B model. 16GB+ recommended for bfloat16.")
+        else:
+            logger.info("Unknown model size - proceeding with current memory configuration")
         
         return base_config
 

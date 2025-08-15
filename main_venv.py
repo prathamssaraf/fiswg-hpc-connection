@@ -60,17 +60,55 @@ os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
 os.environ['PYTORCH_DISABLE_FLASH_ATTENTION'] = '1'
 
 # Simple imports - no complex module cache clearing needed in venv
-from config import setup_environment, setup_logging
+from config import setup_environment, setup_logging, MODEL_OPTIONS
 from evaluator import QwenVLEvaluator
 from utils import save_results, create_timestamp_filename, print_evaluation_summary
 
+def get_user_model_choice():
+    """Get user's model choice with interactive prompt"""
+    print("\n" + "="*70)
+    print("🤖 QWEN MODEL SELECTION")
+    print("="*70)
+    print("Choose your Qwen2.5-VL model:")
+    print()
+    
+    for key, model_info in MODEL_OPTIONS.items():
+        print(f"{key}. {model_info['display_name']}")
+        print(f"   GPU Memory: {model_info['memory_requirement']}")
+        print(f"   {model_info['description']}")
+        print()
+    
+    print("💡 Recommendation:")
+    print("   • Choose 1 (7B) if you have 16-32GB GPU memory")
+    print("   • Choose 2 (72B) if you have 80GB+ GPU memory or want best quality")
+    print()
+    
+    while True:
+        try:
+            choice = input("Enter your choice (1 or 2): ").strip()
+            if choice in MODEL_OPTIONS:
+                selected_model = MODEL_OPTIONS[choice]
+                print()
+                print(f"✅ Selected: {selected_model['display_name']}")
+                print(f"📦 Model: {selected_model['name']}")
+                print("="*70)
+                return selected_model['name']
+            else:
+                print("❌ Invalid choice. Please enter 1 or 2.")
+        except (KeyboardInterrupt, EOFError):
+            print("\n❌ Selection cancelled. Using default 72B model.")
+            return MODEL_OPTIONS["2"]["name"]
+
 def main():
     """Main execution function"""
+    # Get user's model choice first
+    selected_model = get_user_model_choice()
+    
     # Setup environment and logging
     setup_environment()
     logger = setup_logging()
     
-    logger.info("Starting LFW evaluation with Qwen2.5-VL-72B-Instruct (non-quantized)")
+    logger.info(f"Starting LFW evaluation with {selected_model}")
     logger.info(f"Using HF cache directory: {SCRATCH_CACHE}")
     logger.info(f"Using sklearn data directory: {SCRATCH_DATA}")
     logger.info(f"Using Triton cache directory: {SCRATCH_TRITON}")
@@ -84,8 +122,9 @@ def main():
         logger.warning("Not running in virtual environment - this may cause package conflicts")
     
     try:
-        # Initialize evaluator
-        evaluator = QwenVLEvaluator()
+        
+        # Initialize evaluator with selected model
+        evaluator = QwenVLEvaluator(model_name=selected_model)
         
         # Setup (skip package installation since we're using virtual environment)
         evaluator.setup(skip_package_install=True)

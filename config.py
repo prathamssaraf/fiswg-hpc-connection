@@ -28,9 +28,23 @@ def setup_environment():
     # Add our packages to path
     sys.path.insert(0, PACKAGES_DIR)
 
-# Model Configuration - Using Qwen2.5-VL-72B-Instruct (non-quantized for reliability)
-DEFAULT_MODEL_NAME = "Qwen/Qwen2.5-VL-72B-Instruct"  # Non-quantized 72B model
-FALLBACK_MODEL_NAME = None  # No fallback - stick to 72B only
+# Model Configuration - User selectable models
+MODEL_OPTIONS = {
+    "1": {
+        "name": "Qwen/Qwen2.5-VL-7B-Instruct",
+        "display_name": "Qwen2.5-VL-7B-Instruct (Faster, less memory)",
+        "memory_requirement": "16GB+",
+        "description": "7B parameter model - faster inference, good quality"
+    },
+    "2": {
+        "name": "Qwen/Qwen2.5-VL-72B-Instruct", 
+        "display_name": "Qwen2.5-VL-72B-Instruct (Best quality, more memory)",
+        "memory_requirement": "80GB+",
+        "description": "72B parameter model - highest quality, slower inference"
+    }
+}
+
+DEFAULT_MODEL_NAME = MODEL_OPTIONS["2"]["name"]  # Default to 72B for best quality
 
 # Package Requirements for Qwen2.5-VL-72B-Instruct (non-quantized)
 REQUIRED_PACKAGES = [
