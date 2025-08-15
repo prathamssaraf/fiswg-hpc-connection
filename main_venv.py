@@ -70,7 +70,7 @@ def main():
     setup_environment()
     logger = setup_logging()
     
-    logger.info("Starting LFW evaluation with Qwen2.5-VL-72B-Instruct-AWQ (quantized)")
+    logger.info("Starting LFW evaluation with Qwen2.5-VL-72B-Instruct (non-quantized)")
     logger.info(f"Using HF cache directory: {SCRATCH_CACHE}")
     logger.info(f"Using sklearn data directory: {SCRATCH_DATA}")
     logger.info(f"Using Triton cache directory: {SCRATCH_TRITON}")

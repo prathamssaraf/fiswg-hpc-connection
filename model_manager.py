@@ -284,18 +284,17 @@ class ModelManager:
             logger.info("✓ Model loaded successfully")
             
         except Exception as e:
-            logger.error(f"Failed to load Qwen2.5-VL-72B-Instruct-AWQ model: {e}")
+            logger.error(f"Failed to load Qwen2.5-VL-72B-Instruct model: {e}")
             logger.error("Please ensure you have:")
             logger.error("1. Installed transformers from source: pip install git+https://github.com/huggingface/transformers accelerate")
-            logger.error("2. Installed autoawq>=0.1.8: pip install 'autoawq>=0.1.8'")
-            logger.error("3. Sufficient GPU memory (40GB+ recommended for AWQ)")
-            logger.error("4. Proper cache directory permissions")
+            logger.error("2. Sufficient GPU memory (80GB+ recommended for bfloat16)")
+            logger.error("3. Proper cache directory permissions")
             raise
 
     def _get_load_config(self, gpu_memory: float) -> dict:
-        """Get model loading configuration for Qwen2.5-VL-72B-Instruct-AWQ"""
+        """Get model loading configuration for Qwen2.5-VL-72B-Instruct (non-quantized)"""
         base_config = {
-            "torch_dtype": "auto",  # Use auto for AWQ quantized model
+            "torch_dtype": torch.bfloat16,  # Use bfloat16 for memory efficiency
             "trust_remote_code": True,
             "cache_dir": CACHE_DIR,
             "attn_implementation": "sdpa"  # Use SDPA attention to avoid Triton compilation
@@ -304,20 +303,20 @@ class ModelManager:
         # Only use device_map if accelerate is available
         if ACCELERATE_AVAILABLE:
             base_config["device_map"] = "auto"
-            logger.info(f"Loading AWQ quantized model with accelerate device_map and {gpu_memory:.1f}GB GPU memory")
+            logger.info(f"Loading non-quantized 72B model with accelerate device_map and {gpu_memory:.1f}GB GPU memory")
         else:
             logger.warning("accelerate not available - loading on single device")
             if torch.cuda.is_available():
                 base_config["device"] = "cuda:0"
-                logger.info(f"Loading AWQ quantized model on CUDA device with {gpu_memory:.1f}GB GPU memory")
+                logger.info(f"Loading non-quantized 72B model on CUDA device with {gpu_memory:.1f}GB GPU memory")
             else:
                 base_config["device"] = "cpu"
-                logger.info("Loading AWQ quantized model on CPU")
+                logger.info("Loading non-quantized 72B model on CPU")
         
-        # AWQ model is already quantized, no need for additional quantization
-        if gpu_memory < 40:  # AWQ model should work with 40GB+
-            logger.warning("GPU memory may be insufficient for 72B model even with AWQ quantization. 40GB+ recommended.")
-            
+        # Non-quantized 72B model requires significant memory
+        if gpu_memory < 80:  # 72B model typically needs 140GB+ for full precision, 80GB+ for bfloat16
+            logger.warning("GPU memory may be insufficient for 72B model. 80GB+ recommended for bfloat16.")
+        
         return base_config
 
 

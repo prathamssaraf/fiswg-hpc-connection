@@ -28,13 +28,12 @@ def setup_environment():
     # Add our packages to path
     sys.path.insert(0, PACKAGES_DIR)
 
-# Model Configuration - Strictly using Qwen2.5-VL-72B-Instruct-AWQ (quantized)
-DEFAULT_MODEL_NAME = "Qwen/Qwen2.5-VL-72B-Instruct-AWQ"  # AWQ quantized 72B model
+# Model Configuration - Using Qwen2.5-VL-72B-Instruct (non-quantized for reliability)
+DEFAULT_MODEL_NAME = "Qwen/Qwen2.5-VL-72B-Instruct"  # Non-quantized 72B model
 FALLBACK_MODEL_NAME = None  # No fallback - stick to 72B only
 
-# Package Requirements for Qwen2.5-VL-72B-Instruct-AWQ
+# Package Requirements for Qwen2.5-VL-72B-Instruct (non-quantized)
 REQUIRED_PACKAGES = [
-    "autoawq>=0.1.8",  # Required for AWQ quantized model
     "qwen-vl-utils[decord]==0.0.8",  # Specific version for Qwen2.5-VL
     "accelerate",
     "torch",
@@ -48,6 +47,7 @@ REQUIRED_PACKAGES = [
 
 # Note: transformers should be installed from source:
 # pip install git+https://github.com/huggingface/transformers accelerate
+# autoawq not needed for non-quantized model
 
 # Logging Configuration
 def setup_logging():
