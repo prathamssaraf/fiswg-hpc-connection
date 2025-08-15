@@ -10,16 +10,23 @@ import torch
 import importlib.util
 from transformers import AutoProcessor
 
-# Check accelerate availability
-try:
-    import accelerate
-    ACCELERATE_AVAILABLE = True
-    logger = logging.getLogger(__name__)
-    logger.info(f"✓ accelerate {accelerate.__version__} available")
-except ImportError:
-    ACCELERATE_AVAILABLE = False
-    logger = logging.getLogger(__name__)
-    logger.warning("✗ accelerate not available - will use CPU/single GPU mode")
+# Check accelerate availability - will be rechecked after path setup
+ACCELERATE_AVAILABLE = False
+
+def check_accelerate_availability():
+    """Check if accelerate is available after setting up paths"""
+    global ACCELERATE_AVAILABLE
+    try:
+        import accelerate
+        ACCELERATE_AVAILABLE = True
+        logger = logging.getLogger(__name__)
+        logger.info(f"✓ accelerate {accelerate.__version__} available")
+        return True
+    except ImportError:
+        ACCELERATE_AVAILABLE = False
+        logger = logging.getLogger(__name__)
+        logger.warning("✗ accelerate not available - will use CPU/single GPU mode")
+        return False
 
 # Import Qwen2.5VL model class (correct class name for 2.5)
 try:
@@ -47,9 +54,34 @@ class ModelManager:
         self.tokenizer = None
 
     def _check_package_installed(self, package_name: str) -> bool:
-        """Check if a package is already installed"""
-        spec = importlib.util.find_spec(package_name.split('>=')[0].split('==')[0])
-        return spec is not None
+        """Check if a package is already installed in target directory"""
+        clean_name = package_name.split('>=')[0].split('==')[0].split('[')[0]
+        
+        # First check if it's available in current Python path (system or already added)
+        spec = importlib.util.find_spec(clean_name)
+        if spec is not None:
+            return True
+            
+        # Check if installed in our target packages directory
+        import os
+        from pathlib import Path
+        
+        packages_path = Path(PACKAGES_DIR)
+        if packages_path.exists():
+            # Common package directory patterns
+            possible_paths = [
+                packages_path / clean_name,
+                packages_path / f"{clean_name}.py",
+                packages_path / f"{clean_name}-*.dist-info",
+            ]
+            
+            # Check for any matching directories/files
+            for pattern in [f"{clean_name}*", f"{clean_name.replace('-', '_')}*"]:
+                matches = list(packages_path.glob(pattern))
+                if matches:
+                    return True
+                    
+        return False
     
     def _check_autoawq_version(self):
         """Check if autoawq is installed with correct version"""
@@ -82,6 +114,9 @@ class ModelManager:
         else:
             logger.info("✓ autoawq already installed with correct version")
         
+        # Recheck accelerate availability after path setup
+        check_accelerate_availability()
+        
         # Special handling for accelerate
         if not ACCELERATE_AVAILABLE:
             packages_to_install.append("accelerate")
@@ -109,6 +144,10 @@ class ModelManager:
                     logger.info(f"✓ Installed {package}")
                 except subprocess.CalledProcessError as e:
                     logger.warning(f"Failed to install {package}: {e}")
+            
+            # Recheck accelerate after installation if it was installed
+            if any("accelerate" in pkg for pkg in packages_to_install):
+                check_accelerate_availability()
         else:
             logger.info("All required packages already installed")
 
