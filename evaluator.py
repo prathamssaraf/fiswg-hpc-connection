@@ -25,12 +25,16 @@ class QwenVLEvaluator:
         self.data_loader = LFWDataLoader()
         self.image_analyzer = None
         
-    def setup(self):
+    def setup(self, skip_package_install: bool = False):
         """Setup the evaluator by installing packages and loading models"""
         logger.info("Setting up evaluator...")
         
-        # Install required packages
-        self.model_manager.install_packages()
+        # Skip package installation if requested (e.g., when using virtual environment)
+        if skip_package_install:
+            logger.info("Skipping package installation (using existing environment)")
+        else:
+            # Install required packages
+            self.model_manager.install_packages()
         
         # Load model
         self.model_manager.load_model()

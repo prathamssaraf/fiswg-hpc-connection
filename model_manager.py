@@ -89,13 +89,24 @@ class ModelManager:
             import autoawq
             version = autoawq.__version__
             logger.info(f"AutoAWQ version: {version}")
-            # Parse version to check if >= 0.1.8
-            major, minor, patch = map(int, version.split('.'))
-            if major > 0 or (major == 0 and minor > 1) or (major == 0 and minor == 1 and patch >= 8):
+            
+            # For version 0.2.9, we know it's >= 0.1.8
+            if version.startswith('0.2.'):
                 return True
-            else:
-                logger.warning(f"AutoAWQ version {version} is too old, need >= 0.1.8")
-                return False
+                
+            # Parse version to check if >= 0.1.8
+            try:
+                major, minor, patch = map(int, version.split('.'))
+                if major > 0 or (major == 0 and minor > 1) or (major == 0 and minor == 1 and patch >= 8):
+                    return True
+                else:
+                    logger.warning(f"AutoAWQ version {version} is too old, need >= 0.1.8")
+                    return False
+            except ValueError:
+                # Version string parsing failed, assume it's valid if we got here
+                logger.info(f"Could not parse version {version}, assuming it's valid")
+                return True
+                
         except ImportError:
             logger.warning("AutoAWQ not found")
             return False

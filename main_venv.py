@@ -87,8 +87,8 @@ def main():
         # Initialize evaluator
         evaluator = QwenVLEvaluator()
         
-        # Setup (install dependencies and load model)
-        evaluator.setup()
+        # Setup (skip package installation since we're using virtual environment)
+        evaluator.setup(skip_package_install=True)
         
         # Run evaluation (start with subset for testing)
         results = evaluator.evaluate_lfw(max_pairs=100)  # Start with 100 pairs for testing
