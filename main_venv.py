@@ -8,20 +8,13 @@ import os
 import sys
 import logging
 
-# Check if we're in virtual environment
-if 'VIRTUAL_ENV' not in os.environ:
-    print("❌ Not running in virtual environment!")
-    print("Please run: source activate_qwen_venv.sh")
-    print("Or use: /scratch/ps5218/qwen_venv/bin/python main_venv.py")
-    sys.exit(1)
-
-# Verify we're using the correct Python
-expected_python = "/scratch/ps5218/qwen_venv/bin/python"
-if not sys.executable.startswith("/scratch/ps5218/qwen_venv"):
+# Check if we're using the correct virtual environment Python
+expected_venv_path = "/scratch/ps5218/qwen_venv"
+if not sys.executable.startswith(expected_venv_path):
     print(f"❌ Wrong Python interpreter!")
     print(f"Current: {sys.executable}")
-    print(f"Expected: {expected_python}")
-    print("Please use the virtual environment Python")
+    print(f"Expected: {expected_venv_path}/bin/python")
+    print("Please use: /scratch/ps5218/qwen_venv/bin/python main_venv.py")
     sys.exit(1)
 
 print(f"✓ Using virtual environment Python: {sys.executable}")
