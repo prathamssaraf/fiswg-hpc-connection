@@ -38,7 +38,7 @@ except ImportError:
     except ImportError:
         Qwen2_5_VLForConditionalGeneration = None
 from config import (
-    DEFAULT_MODEL_NAME, FALLBACK_MODEL_NAME, REQUIRED_PACKAGES, 
+    DEFAULT_MODEL_NAME, REQUIRED_PACKAGES, 
     PACKAGES_DIR, CACHE_DIR
 )
 
