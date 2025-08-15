@@ -11,6 +11,26 @@ from typing import Tuple
 from forensic_prompts import FORENSIC_PROMPT
 from config import MODEL_GENERATION_CONFIG
 
+# Import qwen_vl_utils for vision processing
+try:
+    from qwen_vl_utils import process_vision_info
+except ImportError:
+    # Fallback function if qwen_vl_utils not available
+    def process_vision_info(messages):
+        """Helper function to process vision information from messages"""
+        image_inputs = []
+        video_inputs = []
+        
+        for message in messages:
+            if isinstance(message, dict) and "content" in message:
+                for content in message["content"]:
+                    if content["type"] == "image":
+                        image_inputs.append(content["image"])
+                    elif content["type"] == "video":
+                        video_inputs.append(content["video"])
+        
+        return image_inputs, video_inputs
+
 logger = logging.getLogger(__name__)
 
 class ImageAnalyzer:
@@ -77,7 +97,7 @@ class ImageAnalyzer:
             messages, tokenize=False, add_generation_prompt=True
         )
         
-        image_inputs, video_inputs = self._process_vision_info(messages)
+        image_inputs, video_inputs = process_vision_info(messages)
         inputs = self.model_manager.processor(
             text=[text],
             images=image_inputs,
@@ -105,20 +125,6 @@ class ImageAnalyzer:
         
         return output_text
 
-    def _process_vision_info(self, messages: list) -> Tuple[list, list]:
-        """Helper function to process vision information from messages"""
-        image_inputs = []
-        video_inputs = []
-        
-        for message in messages:
-            if isinstance(message, dict) and "content" in message:
-                for content in message["content"]:
-                    if content["type"] == "image":
-                        image_inputs.append(content["image"])
-                    elif content["type"] == "video":
-                        video_inputs.append(content["video"])
-        
-        return image_inputs, video_inputs
 
     def _parse_prediction(self, output_text: str) -> bool:
         """Parse model output to extract same/different person prediction from detailed forensic analysis"""

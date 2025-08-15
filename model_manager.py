@@ -7,7 +7,18 @@ import sys
 import subprocess
 import logging
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, AutoProcessor
+import importlib.util
+from transformers import AutoProcessor
+
+# Import Qwen2VL model class
+try:
+    from transformers import Qwen2VLForConditionalGeneration
+except ImportError:
+    # Fallback for older transformers versions
+    try:
+        from qwen_vl_utils import Qwen2VLForConditionalGeneration
+    except ImportError:
+        Qwen2VLForConditionalGeneration = None
 from config import (
     DEFAULT_MODEL_NAME, FALLBACK_MODEL_NAME, REQUIRED_PACKAGES, 
     PACKAGES_DIR, CACHE_DIR
@@ -24,19 +35,35 @@ class ModelManager:
         self.processor = None
         self.tokenizer = None
 
+    def _check_package_installed(self, package_name: str) -> bool:
+        """Check if a package is already installed"""
+        spec = importlib.util.find_spec(package_name.split('>=')[0].split('==')[0])
+        return spec is not None
+    
     def install_packages(self):
-        """Install required packages for Qwen2.5-VL"""
-        logger.info("Installing Qwen2.5-VL packages...")
+        """Install required packages for Qwen2.5-VL (only if not already installed)"""
+        packages_to_install = []
         
         for package in REQUIRED_PACKAGES:
-            try:
-                subprocess.run([
-                    sys.executable, "-m", "pip", "install", "--target", 
-                    PACKAGES_DIR, package
-                ], check=True)
-                logger.info(f"✓ Installed {package}")
-            except subprocess.CalledProcessError as e:
-                logger.warning(f"Failed to install {package}: {e}")
+            package_name = package.split('>=')[0].split('==')[0]
+            if not self._check_package_installed(package_name):
+                packages_to_install.append(package)
+            else:
+                logger.info(f"✓ {package_name} already installed")
+        
+        if packages_to_install:
+            logger.info(f"Installing {len(packages_to_install)} missing packages...")
+            for package in packages_to_install:
+                try:
+                    subprocess.run([
+                        sys.executable, "-m", "pip", "install", "--target", 
+                        PACKAGES_DIR, package
+                    ], check=True)
+                    logger.info(f"✓ Installed {package}")
+                except subprocess.CalledProcessError as e:
+                    logger.warning(f"Failed to install {package}: {e}")
+        else:
+            logger.info("All required packages already installed")
 
     def check_gpu_memory(self):
         """Check available GPU memory and return info"""
@@ -59,8 +86,11 @@ class ModelManager:
             # Determine loading strategy based on GPU memory
             load_config = self._get_load_config(gpu_memory)
             
-            # Load model with optimizations
-            self.model = AutoModelForCausalLM.from_pretrained(
+            # Load model with optimizations using correct model class
+            if Qwen2VLForConditionalGeneration is None:
+                raise ImportError("Qwen2VLForConditionalGeneration not available. Please install qwen-vl-utils or update transformers.")
+            
+            self.model = Qwen2VLForConditionalGeneration.from_pretrained(
                 self.model_name,
                 **load_config
             )
@@ -100,7 +130,10 @@ class ModelManager:
         logger.info(f"Attempting fallback to {FALLBACK_MODEL_NAME}...")
         try:
             self.model_name = FALLBACK_MODEL_NAME
-            self.model = AutoModelForCausalLM.from_pretrained(
+            if Qwen2VLForConditionalGeneration is None:
+                raise ImportError("Qwen2VLForConditionalGeneration not available. Please install qwen-vl-utils or update transformers.")
+            
+            self.model = Qwen2VLForConditionalGeneration.from_pretrained(
                 self.model_name,
                 torch_dtype=torch.bfloat16,
                 device_map="auto",
