@@ -31,8 +31,9 @@ def setup_virtual_environment():
     # 2. Create new virtual environment
     print("2. Creating new virtual environment...")
     try:
+        # Use python3 directly instead of sys.executable
         subprocess.run([
-            sys.executable, "-m", "venv", venv_dir
+            "python3", "-m", "venv", venv_dir
         ], check=True)
         print(f"   ✓ Created virtual environment at {venv_dir}")
     except subprocess.CalledProcessError as e:
