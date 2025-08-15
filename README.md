@@ -163,6 +163,50 @@ Forensic Facial Identification using FISWG 19-Component Methodology
 
 Public repository for research and educational purposes.
 
+## Troubleshooting
+
+### NumPy 2.0 Compatibility Issues
+If you encounter errors like "numpy.core.multiarray failed to import" or "module compiled with NumPy 1.x cannot run with NumPy 2.0":
+
+```bash
+# Fix NumPy compatibility issues
+python3 fix_numpy.py
+
+# Or for complete package rebuild
+python3 rebuild_all_packages.py
+```
+
+### Common Issues
+
+#### AutoAWQ Installation Fails
+```bash
+# Run the cleanup script
+python3 cleanup_packages.py
+```
+
+#### Disk Quota Exceeded
+The system automatically uses scratch directories. Ensure you have:
+- `/scratch/ps5218/huggingface_cache` for model cache
+- `/scratch/ps5218/python_packages` for package installation
+- `/scratch/ps5218/pip_cache` for pip cache
+
+#### Model Loading Errors
+1. Ensure transformers is installed from source
+2. Verify AutoAWQ version >= 0.1.8
+3. Check GPU memory (40GB+ recommended for 72B model)
+
+#### Package Reinstalls Every Run
+Run the updated package manager that checks scratch directory:
+```bash
+python3 main.py  # Now checks packages correctly
+```
+
+### Available Helper Scripts
+
+- `fix_numpy.py` - Fixes NumPy 2.0 compatibility issues
+- `rebuild_all_packages.py` - Complete package rebuild with correct NumPy
+- `cleanup_packages.py` - Clean installation of core packages
+
 ## Contributing
 
 Feel free to submit issues and enhancement requests!
