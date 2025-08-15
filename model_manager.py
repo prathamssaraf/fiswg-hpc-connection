@@ -106,6 +106,12 @@ class ModelManager:
     def _check_numpy_version(self):
         """Check if numpy is installed with compatible version"""
         try:
+            # Clear any cached numpy modules to ensure fresh import
+            import sys
+            for module_name in list(sys.modules.keys()):
+                if module_name.startswith('numpy'):
+                    del sys.modules[module_name]
+            
             import numpy
             version = numpy.__version__
             logger.info(f"NumPy version: {version}")
@@ -167,11 +173,12 @@ class ModelManager:
             logger.info(f"Installing {len(packages_to_install)} missing packages...")
             for package in packages_to_install:
                 try:
-                    # Use --upgrade --force-reinstall for problematic packages like numpy
+                    # Install numpy and accelerate to user directory instead of target to avoid conflicts
                     if package.startswith('numpy') or package.startswith('accelerate'):
+                        logger.info(f"Installing {package} to user directory to avoid conflicts")
                         subprocess.run([
-                            sys.executable, "-m", "pip", "install", "--target", 
-                            PACKAGES_DIR, "--upgrade", "--force-reinstall", package
+                            sys.executable, "-m", "pip", "install", "--user", 
+                            "--upgrade", package
                         ], check=True)
                     else:
                         subprocess.run([

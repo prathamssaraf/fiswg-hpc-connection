@@ -43,14 +43,15 @@ os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
 # Force use of PyTorch's SDPA instead of Flash Attention or Triton
 os.environ['PYTORCH_DISABLE_FLASH_ATTENTION'] = '1'
 
-# Clear any problematic numpy cache before importing our modules
+# Clear any problematic module cache before importing our modules
 import sys
-if 'numpy' in sys.modules:
-    # Remove numpy from cache to prevent multiarray conflicts
-    import importlib
-    for module_name in list(sys.modules.keys()):
-        if module_name.startswith('numpy'):
-            del sys.modules[module_name]
+problematic_modules = ['numpy', 'accelerate', 'autoawq']
+for problem_module in problematic_modules:
+    if problem_module in sys.modules:
+        # Remove from cache to prevent conflicts
+        for module_name in list(sys.modules.keys()):
+            if module_name.startswith(problem_module):
+                del sys.modules[module_name]
 
 from config import setup_environment, setup_logging
 from evaluator import QwenVLEvaluator
