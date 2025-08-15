@@ -10,15 +10,15 @@ import torch
 import importlib.util
 from transformers import AutoProcessor
 
-# Import Qwen2VL model class
+# Import Qwen2.5VL model class (correct class name for 2.5)
 try:
-    from transformers import Qwen2VLForConditionalGeneration
+    from transformers import Qwen2_5_VLForConditionalGeneration
 except ImportError:
     # Fallback for older transformers versions
     try:
-        from qwen_vl_utils import Qwen2VLForConditionalGeneration
+        from qwen_vl_utils import Qwen2_5_VLForConditionalGeneration
     except ImportError:
-        Qwen2VLForConditionalGeneration = None
+        Qwen2_5_VLForConditionalGeneration = None
 from config import (
     DEFAULT_MODEL_NAME, FALLBACK_MODEL_NAME, REQUIRED_PACKAGES, 
     PACKAGES_DIR, CACHE_DIR
@@ -86,11 +86,11 @@ class ModelManager:
             # Determine loading strategy based on GPU memory
             load_config = self._get_load_config(gpu_memory)
             
-            # Load model with optimizations using correct model class
-            if Qwen2VLForConditionalGeneration is None:
-                raise ImportError("Qwen2VLForConditionalGeneration not available. Please install qwen-vl-utils or update transformers.")
+            # Load Qwen2.5-VL-72B-Instruct-AWQ model with optimizations
+            if Qwen2_5_VLForConditionalGeneration is None:
+                raise ImportError("Qwen2_5_VLForConditionalGeneration not available. Please install transformers from source: pip install git+https://github.com/huggingface/transformers accelerate")
             
-            self.model = Qwen2VLForConditionalGeneration.from_pretrained(
+            self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
                 self.model_name,
                 **load_config
             )
@@ -104,50 +104,31 @@ class ModelManager:
             logger.info("✓ Model loaded successfully")
             
         except Exception as e:
-            logger.error(f"Failed to load model: {e}")
-            self._try_fallback_model()
+            logger.error(f"Failed to load Qwen2.5-VL-72B-Instruct-AWQ model: {e}")
+            logger.error("Please ensure you have:")
+            logger.error("1. Installed transformers from source: pip install git+https://github.com/huggingface/transformers accelerate")
+            logger.error("2. Sufficient GPU memory (80GB+ recommended)")
+            logger.error("3. Proper cache directory permissions")
+            raise
 
     def _get_load_config(self, gpu_memory: float) -> dict:
-        """Get model loading configuration based on available GPU memory"""
+        """Get model loading configuration for Qwen2.5-VL-72B-Instruct-AWQ"""
         base_config = {
-            "torch_dtype": torch.bfloat16,
+            "torch_dtype": "auto",  # Use auto for AWQ quantized model
             "device_map": "auto",
             "trust_remote_code": True,
             "cache_dir": CACHE_DIR,
             "attn_implementation": "eager"  # Use eager attention to avoid flash_attn requirement
         }
         
-        if gpu_memory < 16:  # Adjust threshold for smaller models
-            logger.warning("GPU memory may be insufficient. Enabling optimizations...")
-            base_config["load_in_8bit"] = True
+        logger.info(f"Loading AWQ quantized model with {gpu_memory:.1f}GB GPU memory")
+        
+        # AWQ model is already quantized, no need for additional quantization
+        if gpu_memory < 40:  # AWQ model should work with 40GB+
+            logger.warning("GPU memory may be insufficient for 72B model even with AWQ quantization. 40GB+ recommended.")
             
         return base_config
 
-    def _try_fallback_model(self):
-        """Try loading fallback model if main model fails"""
-        logger.info(f"Attempting fallback to {FALLBACK_MODEL_NAME}...")
-        try:
-            self.model_name = FALLBACK_MODEL_NAME
-            if Qwen2VLForConditionalGeneration is None:
-                raise ImportError("Qwen2VLForConditionalGeneration not available. Please install qwen-vl-utils or update transformers.")
-            
-            # Use the same load config for consistency
-            gpu_memory = self.check_gpu_memory()
-            load_config = self._get_load_config(gpu_memory)
-            
-            self.model = Qwen2VLForConditionalGeneration.from_pretrained(
-                self.model_name,
-                **load_config
-            )
-            self.processor = AutoProcessor.from_pretrained(
-                self.model_name, 
-                trust_remote_code=True,
-                cache_dir=CACHE_DIR
-            )
-            logger.info("✓ Fallback model loaded successfully")
-        except Exception as e2:
-            logger.error(f"Failed to load fallback model: {e2}")
-            raise
 
     def is_loaded(self) -> bool:
         """Check if model is loaded and ready"""

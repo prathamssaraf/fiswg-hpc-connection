@@ -28,14 +28,13 @@ def setup_environment():
     # Add our packages to path
     sys.path.insert(0, PACKAGES_DIR)
 
-# Model Configuration - Using correct Qwen2.5-VL model names that exist
-DEFAULT_MODEL_NAME = "Qwen/Qwen2.5-VL-7B-Instruct"  # Primary 7B model
-FALLBACK_MODEL_NAME = "Qwen/Qwen2.5-VL-3B-Instruct"  # Smaller fallback model
+# Model Configuration - Strictly using Qwen2.5-VL-72B-Instruct-AWQ (quantized)
+DEFAULT_MODEL_NAME = "Qwen/Qwen2.5-VL-72B-Instruct-AWQ"  # AWQ quantized 72B model
+FALLBACK_MODEL_NAME = None  # No fallback - stick to 72B only
 
-# Package Requirements
+# Package Requirements for Qwen2.5-VL-72B-Instruct-AWQ
 REQUIRED_PACKAGES = [
-    "qwen-vl-utils",
-    "transformers>=4.40.0",
+    "qwen-vl-utils[decord]==0.0.8",  # Specific version for Qwen2.5-VL
     "accelerate",
     "torch",
     "torchvision", 
@@ -45,6 +44,9 @@ REQUIRED_PACKAGES = [
     "tqdm",
     "numpy"
 ]
+
+# Note: transformers should be installed from source:
+# pip install git+https://github.com/huggingface/transformers accelerate
 
 # Logging Configuration
 def setup_logging():

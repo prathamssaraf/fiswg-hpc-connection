@@ -26,9 +26,10 @@ def main():
     setup_environment()
     logger = setup_logging()
     
-    logger.info("Starting LFW evaluation with Qwen2.5-VL")
+    logger.info("Starting LFW evaluation with Qwen2.5-VL-72B-Instruct-AWQ (quantized)")
     logger.info(f"Using cache directory: {SCRATCH_CACHE}")
     logger.info(f"HF_HOME environment variable: {os.environ.get('HF_HOME')}")
+    logger.info("Note: This requires transformers installed from source")
     
     try:
         # Initialize evaluator
