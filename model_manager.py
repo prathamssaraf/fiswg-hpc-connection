@@ -10,6 +10,17 @@ import torch
 import importlib.util
 from transformers import AutoProcessor
 
+# Check accelerate availability
+try:
+    import accelerate
+    ACCELERATE_AVAILABLE = True
+    logger = logging.getLogger(__name__)
+    logger.info(f"✓ accelerate {accelerate.__version__} available")
+except ImportError:
+    ACCELERATE_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("✗ accelerate not available - will use CPU/single GPU mode")
+
 # Import Qwen2.5VL model class (correct class name for 2.5)
 try:
     from transformers import Qwen2_5_VLForConditionalGeneration
@@ -71,9 +82,16 @@ class ModelManager:
         else:
             logger.info("✓ autoawq already installed with correct version")
         
+        # Special handling for accelerate
+        if not ACCELERATE_AVAILABLE:
+            packages_to_install.append("accelerate")
+            logger.info("✗ accelerate needs installation")
+        else:
+            logger.info("✓ accelerate already available")
+        
         for package in REQUIRED_PACKAGES:
             package_name = package.split('>=')[0].split('==')[0].split('[')[0]  # Handle [extras]
-            if package_name == "autoawq":
+            if package_name in ["autoawq", "accelerate"]:
                 continue  # Already handled above
             if not self._check_package_installed(package_name):
                 packages_to_install.append(package)
@@ -145,13 +163,23 @@ class ModelManager:
         """Get model loading configuration for Qwen2.5-VL-72B-Instruct-AWQ"""
         base_config = {
             "torch_dtype": "auto",  # Use auto for AWQ quantized model
-            "device_map": "auto",
             "trust_remote_code": True,
             "cache_dir": CACHE_DIR,
             "attn_implementation": "sdpa"  # Use SDPA attention to avoid Triton compilation
         }
         
-        logger.info(f"Loading AWQ quantized model with {gpu_memory:.1f}GB GPU memory")
+        # Only use device_map if accelerate is available
+        if ACCELERATE_AVAILABLE:
+            base_config["device_map"] = "auto"
+            logger.info(f"Loading AWQ quantized model with accelerate device_map and {gpu_memory:.1f}GB GPU memory")
+        else:
+            logger.warning("accelerate not available - loading on single device")
+            if torch.cuda.is_available():
+                base_config["device"] = "cuda:0"
+                logger.info(f"Loading AWQ quantized model on CUDA device with {gpu_memory:.1f}GB GPU memory")
+            else:
+                base_config["device"] = "cpu"
+                logger.info("Loading AWQ quantized model on CPU")
         
         # AWQ model is already quantized, no need for additional quantization
         if gpu_memory < 40:  # AWQ model should work with 40GB+
