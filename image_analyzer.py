@@ -72,6 +72,11 @@ class ImageAnalyzer:
             
         except Exception as e:
             logger.error(f"Error analyzing image pair: {e}")
+            # Check if this is a Triton cache manager error that we can ignore
+            if "TRITON_CACHE_MANAGER" in str(e):
+                logger.warning("Triton cache manager error - attempting to continue processing")
+                # Try to continue with a default response
+                return "Unable to process due to Triton cache error", False
             return f"Error: {str(e)}", False
 
     def _preprocess_images(self, img1: np.ndarray, img2: np.ndarray) -> Tuple[Image.Image, Image.Image]:

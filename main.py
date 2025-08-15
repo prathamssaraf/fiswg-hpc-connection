@@ -37,7 +37,6 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 os.environ['TRITON_DISABLE_JIT'] = '1'
 os.environ['TRITON_DISABLE_LINE_INFO'] = '1'
 os.environ['TRITON_DISABLE_CUDA_GRAPHS'] = '1'
-os.environ['TRITON_CACHE_MANAGER'] = '0'
 os.environ['TRITON_DISABLE_CACHE'] = '1'
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
 
@@ -64,6 +63,7 @@ def main():
     logger.info(f"TRITON_CACHE_DIR: {os.environ.get('TRITON_CACHE_DIR')}")
     logger.info(f"TRITON_DISABLE_JIT: {os.environ.get('TRITON_DISABLE_JIT')}")
     logger.info(f"TRITON_DISABLE_CACHE: {os.environ.get('TRITON_DISABLE_CACHE')}")
+    logger.info("Triton JIT compilation completely disabled")
     logger.info(f"PYTORCH_DISABLE_FLASH_ATTENTION: {os.environ.get('PYTORCH_DISABLE_FLASH_ATTENTION')}")
     logger.info(f"TOKENIZERS_PARALLELISM: {os.environ.get('TOKENIZERS_PARALLELISM')}")
     logger.info("Note: This requires transformers installed from source")
