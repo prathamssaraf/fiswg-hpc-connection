@@ -28,9 +28,9 @@ def setup_environment():
     # Add our packages to path
     sys.path.insert(0, PACKAGES_DIR)
 
-# Model Configuration  
-DEFAULT_MODEL_NAME = "Qwen/Qwen2-VL-7B-Instruct"  # Start with 7B as primary
-FALLBACK_MODEL_NAME = "Qwen/Qwen2-VL-2B-Instruct"  # Use 2B as fallback
+# Model Configuration - Using correct Qwen2.5-VL model names that exist
+DEFAULT_MODEL_NAME = "Qwen/Qwen2.5-VL-7B-Instruct"  # Primary 7B model
+FALLBACK_MODEL_NAME = "Qwen/Qwen2.5-VL-3B-Instruct"  # Smaller fallback model
 
 # Package Requirements
 REQUIRED_PACKAGES = [
