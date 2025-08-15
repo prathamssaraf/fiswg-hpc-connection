@@ -34,6 +34,7 @@ FALLBACK_MODEL_NAME = None  # No fallback - stick to 72B only
 
 # Package Requirements for Qwen2.5-VL-72B-Instruct-AWQ
 REQUIRED_PACKAGES = [
+    "autoawq>=0.1.8",  # Required for AWQ quantized model
     "qwen-vl-utils[decord]==0.0.8",  # Specific version for Qwen2.5-VL
     "accelerate",
     "torch",

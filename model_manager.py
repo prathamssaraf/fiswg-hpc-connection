@@ -107,8 +107,9 @@ class ModelManager:
             logger.error(f"Failed to load Qwen2.5-VL-72B-Instruct-AWQ model: {e}")
             logger.error("Please ensure you have:")
             logger.error("1. Installed transformers from source: pip install git+https://github.com/huggingface/transformers accelerate")
-            logger.error("2. Sufficient GPU memory (80GB+ recommended)")
-            logger.error("3. Proper cache directory permissions")
+            logger.error("2. Installed autoawq>=0.1.8: pip install 'autoawq>=0.1.8'")
+            logger.error("3. Sufficient GPU memory (40GB+ recommended for AWQ)")
+            logger.error("4. Proper cache directory permissions")
             raise
 
     def _get_load_config(self, gpu_memory: float) -> dict:

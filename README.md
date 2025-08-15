@@ -66,17 +66,31 @@ The system performs detailed forensic facial comparison using all 19 FISWG stand
 The system is configured for HPC environments with:
 - Scratch directory caching (`/scratch/ps5218/huggingface_cache`)
 - Custom package installation paths
-- Memory optimization for large models
+- AWQ quantization for memory efficiency
+
+### Installation for Qwen2.5-VL-72B-Instruct-AWQ
+```bash
+# Install transformers from source (REQUIRED)
+pip install --target /scratch/ps5218/python_packages git+https://github.com/huggingface/transformers accelerate
+
+# Install AutoAWQ for quantization support (REQUIRED)
+pip install --target /scratch/ps5218/python_packages 'autoawq>=0.1.8'
+
+# Install other dependencies
+pip install --target /scratch/ps5218/python_packages 'qwen-vl-utils[decord]==0.0.8'
+```
 
 ### Required Packages
 - torch
-- transformers>=4.40.0
-- qwen-vl-utils
+- transformers (from source)
+- autoawq>=0.1.8
+- qwen-vl-utils[decord]==0.0.8
 - scikit-learn
 - PIL (Pillow)
 - numpy
 - tqdm
 - requests
+- accelerate
 
 ## Usage
 
