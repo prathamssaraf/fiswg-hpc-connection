@@ -275,6 +275,14 @@ class ModelManager:
                 **load_config
             )
             
+            # If accelerate is not available, manually move model to device
+            if not ACCELERATE_AVAILABLE:
+                if torch.cuda.is_available():
+                    logger.info("Moving model to CUDA device...")
+                    self.model = self.model.to("cuda:0")
+                else:
+                    logger.info("Using CPU for model...")
+            
             self.processor = AutoProcessor.from_pretrained(
                 self.model_name, 
                 trust_remote_code=True,
@@ -306,12 +314,8 @@ class ModelManager:
             logger.info(f"Loading non-quantized 72B model with accelerate device_map and {gpu_memory:.1f}GB GPU memory")
         else:
             logger.warning("accelerate not available - loading on single device")
-            if torch.cuda.is_available():
-                base_config["device"] = "cuda:0"
-                logger.info(f"Loading non-quantized 72B model on CUDA device with {gpu_memory:.1f}GB GPU memory")
-            else:
-                base_config["device"] = "cpu"
-                logger.info("Loading non-quantized 72B model on CPU")
+            # Don't pass device parameter, we'll move model after loading
+            logger.info(f"Loading non-quantized 72B model for single device with {gpu_memory:.1f}GB GPU memory")
         
         # Non-quantized 72B model requires significant memory
         if gpu_memory < 80:  # 72B model typically needs 140GB+ for full precision, 80GB+ for bfloat16
