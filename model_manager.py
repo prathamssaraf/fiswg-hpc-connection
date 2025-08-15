@@ -103,6 +103,29 @@ class ModelManager:
             logger.warning(f"Error checking AutoAWQ version: {e}")
             return False
 
+    def _check_numpy_version(self):
+        """Check if numpy is installed with compatible version"""
+        try:
+            import numpy
+            version = numpy.__version__
+            logger.info(f"NumPy version: {version}")
+            # Parse version to check if >= 1.21.0 and < 2.0.0
+            parts = version.split('.')
+            major, minor = int(parts[0]), int(parts[1])
+            if major == 1 and minor >= 21:
+                return True
+            elif major > 1 and major < 2:
+                return True
+            else:
+                logger.warning(f"NumPy version {version} may cause compatibility issues, need >= 1.21.0, < 2.0.0")
+                return False
+        except ImportError:
+            logger.warning("NumPy not found")
+            return False
+        except Exception as e:
+            logger.warning(f"Error checking NumPy version: {e}")
+            return False
+
     def install_packages(self):
         """Install required packages for Qwen2.5-VL (only if not already installed)"""
         packages_to_install = []
@@ -113,6 +136,13 @@ class ModelManager:
             logger.info("✗ autoawq needs installation/upgrade")
         else:
             logger.info("✓ autoawq already installed with correct version")
+        
+        # Special handling for numpy
+        if not self._check_numpy_version():
+            packages_to_install.append("numpy>=1.21.0,<2.0.0")
+            logger.info("✗ numpy needs installation/upgrade")
+        else:
+            logger.info("✓ numpy already installed with correct version")
         
         # Recheck accelerate availability after path setup
         check_accelerate_availability()
@@ -126,7 +156,7 @@ class ModelManager:
         
         for package in REQUIRED_PACKAGES:
             package_name = package.split('>=')[0].split('==')[0].split('[')[0]  # Handle [extras]
-            if package_name in ["autoawq", "accelerate"]:
+            if package_name in ["autoawq", "accelerate", "numpy"]:
                 continue  # Already handled above
             if not self._check_package_installed(package_name):
                 packages_to_install.append(package)
@@ -137,10 +167,17 @@ class ModelManager:
             logger.info(f"Installing {len(packages_to_install)} missing packages...")
             for package in packages_to_install:
                 try:
-                    subprocess.run([
-                        sys.executable, "-m", "pip", "install", "--target", 
-                        PACKAGES_DIR, package
-                    ], check=True)
+                    # Use --upgrade --force-reinstall for problematic packages like numpy
+                    if package.startswith('numpy') or package.startswith('accelerate'):
+                        subprocess.run([
+                            sys.executable, "-m", "pip", "install", "--target", 
+                            PACKAGES_DIR, "--upgrade", "--force-reinstall", package
+                        ], check=True)
+                    else:
+                        subprocess.run([
+                            sys.executable, "-m", "pip", "install", "--target", 
+                            PACKAGES_DIR, package
+                        ], check=True)
                     logger.info(f"✓ Installed {package}")
                 except subprocess.CalledProcessError as e:
                     logger.warning(f"Failed to install {package}: {e}")
