@@ -40,12 +40,41 @@ class ModelManager:
         spec = importlib.util.find_spec(package_name.split('>=')[0].split('==')[0])
         return spec is not None
     
+    def _check_autoawq_version(self):
+        """Check if autoawq is installed with correct version"""
+        try:
+            import autoawq
+            version = autoawq.__version__
+            logger.info(f"AutoAWQ version: {version}")
+            # Parse version to check if >= 0.1.8
+            major, minor, patch = map(int, version.split('.'))
+            if major > 0 or (major == 0 and minor > 1) or (major == 0 and minor == 1 and patch >= 8):
+                return True
+            else:
+                logger.warning(f"AutoAWQ version {version} is too old, need >= 0.1.8")
+                return False
+        except ImportError:
+            logger.warning("AutoAWQ not found")
+            return False
+        except Exception as e:
+            logger.warning(f"Error checking AutoAWQ version: {e}")
+            return False
+
     def install_packages(self):
         """Install required packages for Qwen2.5-VL (only if not already installed)"""
         packages_to_install = []
         
+        # Special handling for autoawq
+        if not self._check_autoawq_version():
+            packages_to_install.append("autoawq>=0.1.8")
+            logger.info("✗ autoawq needs installation/upgrade")
+        else:
+            logger.info("✓ autoawq already installed with correct version")
+        
         for package in REQUIRED_PACKAGES:
-            package_name = package.split('>=')[0].split('==')[0]
+            package_name = package.split('>=')[0].split('==')[0].split('[')[0]  # Handle [extras]
+            if package_name == "autoawq":
+                continue  # Already handled above
             if not self._check_package_installed(package_name):
                 packages_to_install.append(package)
             else:
