@@ -134,6 +134,12 @@ class ModelManager:
 
     def install_packages(self):
         """Install required packages for Qwen2.5-VL (only if not already installed)"""
+        # Ensure pip cache is in scratch directory to avoid disk quota issues
+        import os
+        pip_cache_dir = '/scratch/ps5218/pip_cache'
+        os.environ['PIP_CACHE_DIR'] = pip_cache_dir
+        os.makedirs(pip_cache_dir, exist_ok=True)
+        
         packages_to_install = []
         
         # Special handling for autoawq
@@ -190,8 +196,25 @@ class ModelManager:
             # Install remaining packages normally to scratch directory
             for package in packages_to_install:
                 try:
-                    if package.startswith('accelerate') or package.startswith('autoawq'):
-                        # Use --upgrade --force-reinstall for problematic packages
+                    if package.startswith('autoawq'):
+                        # Special handling for autoawq to avoid build issues
+                        logger.info(f"Installing {package} with special build handling")
+                        try:
+                            subprocess.run([
+                                sys.executable, "-m", "pip", "install", "--target", 
+                                PACKAGES_DIR, "--upgrade", "--force-reinstall", 
+                                "--no-build-isolation", package
+                            ], check=True)
+                        except subprocess.CalledProcessError:
+                            # Fallback to binary only
+                            logger.info(f"Retrying {package} with binary-only installation")
+                            subprocess.run([
+                                sys.executable, "-m", "pip", "install", "--target", 
+                                PACKAGES_DIR, "--upgrade", "--force-reinstall", 
+                                "--only-binary=all", package
+                            ], check=True)
+                    elif package.startswith('accelerate'):
+                        # Use --upgrade --force-reinstall for accelerate
                         subprocess.run([
                             sys.executable, "-m", "pip", "install", "--target", 
                             PACKAGES_DIR, "--upgrade", "--force-reinstall", package

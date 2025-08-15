@@ -30,6 +30,10 @@ os.environ['TRITON_CACHE_DIR'] = SCRATCH_TRITON
 # Torch kernel cache directory
 os.environ['TORCH_KERNEL_CACHE_PATH'] = SCRATCH_TORCH_KERNELS
 
+# Pip cache directory (avoid disk quota in home)
+SCRATCH_PIP_CACHE = '/scratch/ps5218/pip_cache'
+os.environ['PIP_CACHE_DIR'] = SCRATCH_PIP_CACHE
+
 # Tokenizers parallelism (suppress warnings)
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 

@@ -15,8 +15,14 @@ def cleanup_packages():
     
     # Define paths
     scratch_packages = '/scratch/ps5218/python_packages'
+    scratch_pip_cache = '/scratch/ps5218/pip_cache'
+    
+    # Set pip cache to scratch directory to avoid disk quota issues
+    os.environ['PIP_CACHE_DIR'] = scratch_pip_cache
+    os.makedirs(scratch_pip_cache, exist_ok=True)
     
     print("🧹 Cleaning up problematic package installations...")
+    print(f"Using pip cache: {scratch_pip_cache}")
     
     # Remove accelerate and numpy from scratch directory
     packages_to_remove = ['accelerate', 'numpy', 'autoawq']
@@ -62,18 +68,40 @@ def cleanup_packages():
     except subprocess.CalledProcessError as e:
         print(f"❌ Failed to install numpy: {e}")
     
-    # Install other packages
-    other_packages = ["accelerate", "autoawq>=0.1.8"]
-    for package in other_packages:
+    # Install accelerate
+    try:
+        print("Installing accelerate...")
+        subprocess.run([
+            sys.executable, "-m", "pip", "install", "--target", 
+            scratch_packages, "--upgrade", "--force-reinstall", "accelerate"
+        ], check=True)
+        print("✓ Installed accelerate")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to install accelerate: {e}")
+    
+    # Install autoawq with special handling to avoid build issues
+    try:
+        print("Installing autoawq (with --no-build-isolation)...")
+        subprocess.run([
+            sys.executable, "-m", "pip", "install", "--target", 
+            scratch_packages, "--upgrade", "--force-reinstall", 
+            "--no-build-isolation", "autoawq>=0.1.8"
+        ], check=True)
+        print("✓ Installed autoawq")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to install autoawq with --no-build-isolation: {e}")
+        # Try with pre-compiled wheel if available
         try:
-            print(f"Installing {package}...")
+            print("Trying autoawq without build isolation...")
             subprocess.run([
                 sys.executable, "-m", "pip", "install", "--target", 
-                scratch_packages, "--upgrade", "--force-reinstall", package
+                scratch_packages, "--upgrade", "--force-reinstall", 
+                "--only-binary=all", "autoawq>=0.1.8"
             ], check=True)
-            print(f"✓ Installed {package}")
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Failed to install {package}: {e}")
+            print("✓ Installed autoawq (binary only)")
+        except subprocess.CalledProcessError as e2:
+            print(f"❌ Failed to install autoawq: {e2}")
+            print("Note: You may need to install autoawq manually")
     
     print("🎉 Package cleanup completed!")
     print("Now you can run: python3 main.py")
