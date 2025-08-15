@@ -1,7 +1,5 @@
 #!/bin/bash
-"""
-Simple script to run the evaluation with virtual environment
-"""
+# Simple script to run the evaluation with virtual environment
 
 # Colors for output
 GREEN='\033[0;32m'

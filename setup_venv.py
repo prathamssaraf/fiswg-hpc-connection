@@ -43,10 +43,17 @@ def setup_virtual_environment():
     venv_python = f"{venv_dir}/bin/python"
     venv_pip = f"{venv_dir}/bin/pip"
     
-    # 4. Upgrade pip in venv
+    # 4. Set pip cache environment variable for venv
+    pip_cache_dir = f"{scratch_dir}/pip_cache"
+    os.makedirs(pip_cache_dir, exist_ok=True)
+    
+    # 5. Upgrade pip in venv with cache setting
     print("3. Upgrading pip in virtual environment...")
+    venv_env = os.environ.copy()
+    venv_env['PIP_CACHE_DIR'] = pip_cache_dir
     try:
-        subprocess.run([venv_python, "-m", "pip", "install", "--upgrade", "pip"], check=True)
+        subprocess.run([venv_python, "-m", "pip", "install", "--upgrade", "pip"], 
+                      env=venv_env, check=True)
         print("   ✓ Upgraded pip")
     except subprocess.CalledProcessError as e:
         print(f"   ❌ Failed to upgrade pip: {e}")
@@ -70,7 +77,7 @@ def setup_virtual_environment():
     for package in packages:
         try:
             print(f"   Installing {package}...")
-            subprocess.run([venv_pip, "install", package], check=True)
+            subprocess.run([venv_pip, "install", package], env=venv_env, check=True)
             print(f"   ✓ Installed {package}")
         except subprocess.CalledProcessError as e:
             print(f"   ❌ Failed to install {package}: {e}")
@@ -80,25 +87,32 @@ def setup_virtual_environment():
     try:
         subprocess.run([
             venv_pip, "install", "git+https://github.com/huggingface/transformers"
-        ], check=True)
+        ], env=venv_env, check=True)
         print("   ✓ Installed transformers from source")
     except subprocess.CalledProcessError as e:
         print(f"   ❌ Failed to install transformers: {e}")
         # Fallback to PyPI
         try:
-            subprocess.run([venv_pip, "install", "transformers"], check=True)
+            subprocess.run([venv_pip, "install", "transformers"], env=venv_env, check=True)
             print("   ✓ Installed transformers from PyPI")
         except subprocess.CalledProcessError as e2:
             print(f"   ❌ Failed to install transformers: {e2}")
     
-    # 7. Install autoawq with special handling
+    # 7. Install autoawq with special handling and cache
     print("6. Installing autoawq...")
     try:
-        subprocess.run([venv_pip, "install", "autoawq>=0.1.8"], check=True)
+        subprocess.run([venv_pip, "install", "autoawq>=0.1.8"], env=venv_env, check=True)
         print("   ✓ Installed autoawq")
     except subprocess.CalledProcessError as e:
         print(f"   ❌ Failed to install autoawq: {e}")
-        print("   Note: You may need to install autoawq manually later")
+        # Try with --no-build-isolation
+        try:
+            subprocess.run([venv_pip, "install", "--no-build-isolation", "autoawq>=0.1.8"], 
+                          env=venv_env, check=True)
+            print("   ✓ Installed autoawq (no build isolation)")
+        except subprocess.CalledProcessError as e2:
+            print(f"   ❌ Failed to install autoawq: {e2}")
+            print("   Note: AutoAWQ installation failed - will try without it")
     
     # 8. Test installation
     print("7. Testing installation...")
