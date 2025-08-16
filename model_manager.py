@@ -314,24 +314,43 @@ class ModelManager:
             "torch_dtype": torch.bfloat16,  # Use bfloat16 for memory efficiency
             "trust_remote_code": True,
             "cache_dir": CACHE_DIR,
-            "attn_implementation": "sdpa"  # Use SDPA attention to avoid Triton compilation
+            "attn_implementation": "sdpa",  # Use SDPA attention to avoid Triton compilation
+            "low_cpu_mem_usage": True  # Reduce CPU memory usage during loading
         }
         
         num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
         
-        # Only use device_map if accelerate is available
-        if ACCELERATE_AVAILABLE and num_gpus > 0:
-            if num_gpus > 1:
-                # Multi-GPU setup - use auto device mapping
+        # Explicit multi-GPU configuration for Qwen2.5-VL
+        if ACCELERATE_AVAILABLE and num_gpus > 1:
+            # Create explicit device map for better control
+            if "72B" in self.model_name:
+                # For 72B model, use explicit device mapping to ensure proper distribution
+                logger.info(f"Configuring explicit device mapping for 72B model across {num_gpus} GPUs")
                 base_config["device_map"] = "auto"
-                base_config["max_memory"] = {i: "30GB" for i in range(num_gpus)}  # Reserve 2GB per GPU for CUDA overhead
-                logger.info(f"Loading model with multi-GPU support across {num_gpus} GPUs")
-                logger.info(f"Total GPU memory: {gpu_memory:.1f}GB")
-            else:
-                # Single GPU
+                # Set max memory per GPU with buffer for CUDA operations
+                max_memory_per_gpu = "30GiB"  # Reserve ~2GB per GPU for CUDA overhead
+                base_config["max_memory"] = {i: max_memory_per_gpu for i in range(num_gpus)}
+                
+                # Force model parallelism
+                base_config["torch_dtype"] = torch.bfloat16
+                
+                logger.info(f"Multi-GPU setup: {num_gpus} GPUs, {max_memory_per_gpu} per GPU")
+                logger.info(f"Total available GPU memory: {gpu_memory:.1f}GB")
+                
+            elif "7B" in self.model_name:
+                # 7B model can fit on single GPU but use multiple for inference speed
+                logger.info(f"7B model with multi-GPU acceleration across {num_gpus} GPUs")
                 base_config["device_map"] = "auto"
-                logger.info(f"Loading model on single GPU with {gpu_memory:.1f}GB memory")
+                max_memory_per_gpu = "15GiB"  # 7B model is smaller
+                base_config["max_memory"] = {i: max_memory_per_gpu for i in range(num_gpus)}
+                
+        elif ACCELERATE_AVAILABLE and num_gpus == 1:
+            # Single GPU configuration
+            base_config["device_map"] = "auto"
+            logger.info(f"Loading model on single GPU with {gpu_memory:.1f}GB memory")
+            
         else:
+            # CPU or no accelerate fallback
             if not ACCELERATE_AVAILABLE:
                 logger.warning("accelerate not available - loading on single device")
             else:
@@ -363,9 +382,36 @@ class ModelManager:
 
     def get_model_info(self) -> dict:
         """Get information about the loaded model"""
-        return {
+        info = {
             "model_name": self.model_name,
             "is_loaded": self.is_loaded(),
-            "device": str(self.model.device) if self.model else None,
             "dtype": str(self.model.dtype) if self.model else None
         }
+        
+        # Add device information for multi-GPU setups
+        if self.model and hasattr(self.model, 'hf_device_map'):
+            info["device_map"] = self.model.hf_device_map
+            info["distributed_across_gpus"] = len(self.model.hf_device_map) > 1
+        elif self.model:
+            info["device"] = str(self.model.device)
+            info["distributed_across_gpus"] = False
+        else:
+            info["device"] = None
+            info["distributed_across_gpus"] = False
+            
+        return info
+    
+    def print_gpu_utilization(self):
+        """Print current GPU utilization"""
+        if torch.cuda.is_available():
+            logger.info("=== GPU Utilization ===")
+            for i in range(torch.cuda.device_count()):
+                memory_allocated = torch.cuda.memory_allocated(i) / (1024**3)
+                memory_reserved = torch.cuda.memory_reserved(i) / (1024**3)
+                memory_total = torch.cuda.get_device_properties(i).total_memory / (1024**3)
+                utilization = (memory_allocated / memory_total) * 100
+                
+                logger.info(f"GPU {i}: {memory_allocated:.1f}GB/{memory_total:.1f}GB ({utilization:.1f}%) allocated")
+                logger.info(f"       {memory_reserved:.1f}GB reserved")
+        else:
+            logger.info("No CUDA GPUs available")

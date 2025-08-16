@@ -42,6 +42,15 @@ class QwenVLEvaluator:
         # Initialize image analyzer
         self.image_analyzer = ImageAnalyzer(self.model_manager)
         
+        # Print model device information
+        model_info = self.model_manager.get_model_info()
+        logger.info(f"Model distributed across GPUs: {model_info.get('distributed_across_gpus', False)}")
+        if 'device_map' in model_info:
+            logger.info(f"Device map: {model_info['device_map']}")
+        
+        # Print GPU utilization after model loading
+        self.model_manager.print_gpu_utilization()
+        
         logger.info("✓ Evaluator setup complete")
 
     def evaluate_lfw(self, max_pairs: Optional[int] = None) -> Dict:
