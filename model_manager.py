@@ -269,6 +269,9 @@ class ModelManager:
         logger.info(f"Loading {self.model_name}...")
         logger.info(f"Using cache directory: {CACHE_DIR}")
         
+        # Re-check accelerate availability at runtime (in case virtual env wasn't active during import)
+        check_accelerate_availability()
+        
         try:
             gpu_memory = self.check_gpu_memory()
             
