@@ -246,11 +246,20 @@ class ModelManager:
             logger.info("All required packages already installed")
 
     def check_gpu_memory(self):
-        """Check available GPU memory and return info"""
+        """Check available GPU memory and return info for all GPUs"""
         if torch.cuda.is_available():
-            gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-            logger.info(f"Available GPU memory: {gpu_memory:.1f} GB")
-            return gpu_memory
+            num_gpus = torch.cuda.device_count()
+            total_memory = 0
+            
+            logger.info(f"Found {num_gpus} GPU(s):")
+            for i in range(num_gpus):
+                props = torch.cuda.get_device_properties(i)
+                gpu_memory = props.total_memory / (1024**3)
+                total_memory += gpu_memory
+                logger.info(f"  GPU {i}: {props.name} - {gpu_memory:.1f} GB")
+            
+            logger.info(f"Total GPU memory across all devices: {total_memory:.1f} GB")
+            return total_memory
         else:
             logger.info("No GPU available, using CPU")
             return 0
@@ -300,7 +309,7 @@ class ModelManager:
             raise
 
     def _get_load_config(self, gpu_memory: float) -> dict:
-        """Get model loading configuration for Qwen2.5-VL-72B-Instruct (non-quantized)"""
+        """Get model loading configuration optimized for multi-GPU setup"""
         base_config = {
             "torch_dtype": torch.bfloat16,  # Use bfloat16 for memory efficiency
             "trust_remote_code": True,
@@ -308,23 +317,40 @@ class ModelManager:
             "attn_implementation": "sdpa"  # Use SDPA attention to avoid Triton compilation
         }
         
+        num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+        
         # Only use device_map if accelerate is available
-        if ACCELERATE_AVAILABLE:
-            base_config["device_map"] = "auto"
-            logger.info(f"Loading non-quantized 72B model with accelerate device_map and {gpu_memory:.1f}GB GPU memory")
+        if ACCELERATE_AVAILABLE and num_gpus > 0:
+            if num_gpus > 1:
+                # Multi-GPU setup - use auto device mapping
+                base_config["device_map"] = "auto"
+                base_config["max_memory"] = {i: "30GB" for i in range(num_gpus)}  # Reserve 2GB per GPU for CUDA overhead
+                logger.info(f"Loading model with multi-GPU support across {num_gpus} GPUs")
+                logger.info(f"Total GPU memory: {gpu_memory:.1f}GB")
+            else:
+                # Single GPU
+                base_config["device_map"] = "auto"
+                logger.info(f"Loading model on single GPU with {gpu_memory:.1f}GB memory")
         else:
-            logger.warning("accelerate not available - loading on single device")
-            # Don't pass device parameter, we'll move model after loading
-            logger.info(f"Loading non-quantized 72B model for single device with {gpu_memory:.1f}GB GPU memory")
+            if not ACCELERATE_AVAILABLE:
+                logger.warning("accelerate not available - loading on single device")
+            else:
+                logger.warning("No GPUs detected - using CPU")
+            logger.info(f"Loading model for single device with {gpu_memory:.1f}GB memory")
         
         # Check memory requirements based on model size
         if "72B" in self.model_name:
-            if gpu_memory < 80:  # 72B model typically needs 140GB+ for full precision, 80GB+ for bfloat16
-                logger.warning("GPU memory may be insufficient for 72B model. 80GB+ recommended for bfloat16.")
-                logger.warning("Consider using the 7B model if you encounter out-of-memory errors.")
+            if gpu_memory < 80:
+                logger.warning(f"GPU memory ({gpu_memory:.1f}GB) may be insufficient for 72B model.")
+                logger.warning("80GB+ recommended for bfloat16. Consider using 7B model if errors occur.")
+            else:
+                logger.info(f"✓ Sufficient GPU memory ({gpu_memory:.1f}GB) for 72B model")
         elif "7B" in self.model_name:
-            if gpu_memory < 16:  # 7B model needs ~14GB for bfloat16
-                logger.warning("GPU memory may be insufficient for 7B model. 16GB+ recommended for bfloat16.")
+            if gpu_memory < 16:
+                logger.warning(f"GPU memory ({gpu_memory:.1f}GB) may be insufficient for 7B model.")
+                logger.warning("16GB+ recommended for bfloat16.")
+            else:
+                logger.info(f"✓ Sufficient GPU memory ({gpu_memory:.1f}GB) for 7B model")
         else:
             logger.info("Unknown model size - proceeding with current memory configuration")
         
