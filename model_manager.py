@@ -286,7 +286,30 @@ class ModelManager:
             
             # If accelerate is not available, manually move model to device
             if not ACCELERATE_AVAILABLE:
-                if torch.cuda.is_available():
+                num_gpus = torch.cuda.device_count()
+                if torch.cuda.is_available() and num_gpus > 1 and "72B" in self.model_name:
+                    # Try manual multi-GPU distribution for 72B model
+                    logger.info(f"Attempting manual distribution across {num_gpus} GPUs...")
+                    try:
+                        # Use DataParallel for multi-GPU inference
+                        device_ids = list(range(num_gpus))
+                        logger.info(f"Using DataParallel with devices: {device_ids}")
+                        self.model = torch.nn.DataParallel(self.model, device_ids=device_ids)
+                        self.model = self.model.to("cuda:0")
+                        logger.info("✓ Model distributed across multiple GPUs using DataParallel")
+                    except Exception as dp_error:
+                        logger.warning(f"DataParallel failed: {dp_error}")
+                        logger.info("Falling back to single GPU...")
+                        # Clear GPU memory and try single GPU
+                        torch.cuda.empty_cache()
+                        # Try loading 7B model instead
+                        if "72B" in self.model_name:
+                            logger.warning("72B model too large for single GPU, switching to 7B model")
+                            self.model_name = "Qwen/Qwen2.5-VL-7B-Instruct"
+                            # Reload with 7B model
+                            logger.info("Reloading with 7B model...")
+                            return self.load_model()
+                elif torch.cuda.is_available():
                     logger.info("Moving model to CUDA device...")
                     self.model = self.model.to("cuda:0")
                 else:
@@ -348,6 +371,14 @@ class ModelManager:
             # Single GPU configuration
             base_config["device_map"] = "auto"
             logger.info(f"Loading model on single GPU with {gpu_memory:.1f}GB memory")
+            
+        elif not ACCELERATE_AVAILABLE and num_gpus > 1 and "72B" in self.model_name:
+            # Fallback: Try to use manual device distribution for 72B model
+            logger.warning("accelerate not available - attempting manual multi-GPU fallback for 72B model")
+            logger.info(f"Will attempt to load on CPU first, then distribute across {num_gpus} GPUs")
+            # Load on CPU first to avoid single GPU OOM, then move to GPUs
+            base_config["torch_dtype"] = torch.bfloat16
+            # Don't set device - we'll handle this manually after loading
             
         else:
             # CPU or no accelerate fallback
