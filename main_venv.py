@@ -54,7 +54,11 @@ os.environ['TRITON_DISABLE_JIT'] = '1'
 os.environ['TRITON_DISABLE_LINE_INFO'] = '1'
 os.environ['TRITON_DISABLE_CUDA_GRAPHS'] = '1'
 os.environ['TRITON_DISABLE_CACHE'] = '1'
-os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
+
+# CUDA memory optimization for multi-GPU setup
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True,max_split_size_mb:128'
+os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'  # Consistent GPU ordering
+os.environ['TORCH_CUDNN_V8_API_LRU_CACHE_LIMIT'] = '32'  # Limit cuDNN cache
 
 # Force use of PyTorch's SDPA instead of Flash Attention or Triton
 os.environ['PYTORCH_DISABLE_FLASH_ATTENTION'] = '1'
